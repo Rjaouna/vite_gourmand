@@ -1,0 +1,48 @@
+{# templates/_presentation/_presentation.html.twig #}
+
+<section class="container my-5">
+  {# Row 1 : Texte de présentation (6 lignes) #}
+  <div class="row">
+    <div class="col-12">
+      <h2 class="mb-3">Présentation</h2>
+Vite & Gourmand » est une entreprise constituée de deux personnes, Julie et José. Elle existe
+depuis 25 ans à Bordeaux, et propose leurs prestations pour tout événement (simple repas
+comme Noël ou encore Pâques) au travers d’un menu en constante évolution.
+    </div>
+  </div>
+
+  {# Row 2 : 2 colonnes (6/6) : gauche = 2 photos, droite = 1 photo #}
+  <div class="row mt-4 g-3">
+    {# Moitié gauche : 2 photos sur 6 grilles (chacune prend 6/12 dans la moitié gauche) #}
+    <div class="col-12 col-lg-6">
+      <div class="row g-3">
+        <div class="col-6">
+          <img
+            src="{{ asset('assets/img/julie.png') }}"
+            class="img-fluid rounded shadow-sm w-100 shadow-sm"
+            alt="julie"
+            style="object-fit: cover; height: 220px;"
+          >
+        </div>
+        <div class="col-6">
+          <img
+            src="{{ asset('assets/img/jose.png') }}"
+            class="img-fluid rounded shadow-sm w-100 shadow-sm"
+            alt="Jose"
+            style="object-fit: cover; height: 220px;"
+          >
+        </div>
+      </div>
+    </div>
+
+    {# Moitié droite : 1 photo sur les 6 grilles restantes (grande) #}
+    <div class="col-12 col-lg-6">
+      <img
+        src="{{ asset('assets/img/buffet.png') }}"
+        class="img-fluid rounded shadow-sm w-100 shadow-sm"
+        alt="buffet"
+        style="object-fit: cover; height: 220px;"
+      >
+    </div>
+  </div>
+</section>
