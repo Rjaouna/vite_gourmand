@@ -1,20 +1,20 @@
 <nav class="navbar navbar-expand-lg bg-light" data-bs-theme="light">
   <div class="container-fluid">
-    <a class="navbar-brand" href="{{path('app_home')}}">
+    <a class="navbar-brand" href="{{ path('app_home') }}">
       <img src="{{ asset('assets/img/logo.png') }}" alt="Logo" height="90">
     </a>
 
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor03"
-            aria-controls="navbarColor03" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarColor03">
+    <div class="collapse navbar-collapse" id="navbarMain">
 
       {# --- MENU CENTRÉ --- #}
       <ul class="navbar-nav mx-auto gap-lg-3 fs-5 fw-semibold">
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center gap-2" href="#">
+          <a class="nav-link d-flex align-items-center gap-2" href="{{ path('app_home') }}">
             <i class="bi bi-house-door"></i> Accueil
           </a>
         </li>
@@ -26,7 +26,7 @@
         </li>
 
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center gap-2" href="{{path('app_contact')}}">
+          <a class="nav-link d-flex align-items-center gap-2" href="{{ path('app_contact') }}">
             <i class="bi bi-envelope"></i> Contact
           </a>
         </li>
@@ -52,7 +52,7 @@
       <ul class="navbar-nav ms-lg-auto fs-5 fw-semibold">
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown"
-             href="#" role="button" aria-haspopup="true" aria-expanded="false">
+             href="#" role="button" aria-expanded="false">
             <i class="bi bi-person-circle"></i> Compte
           </a>
 
@@ -67,14 +67,14 @@
 
               <div class="dropdown-divider"></div>
 
-              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{{ path('app_logout') }}">
                 <i class="bi bi-box-arrow-right"></i> Déconnexion
               </a>
             {% else %}
-              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{{ path('app_login') }}">
                 <i class="bi bi-box-arrow-in-right"></i> Connexion
               </a>
-              <a class="dropdown-item d-flex align-items-center gap-2" href="#">
+              <a class="dropdown-item d-flex align-items-center gap-2" href="{{ path('app_register') }}">
                 <i class="bi bi-person-plus"></i> Créer un compte
               </a>
             {% endif %}

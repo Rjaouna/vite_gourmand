@@ -1,0 +1,102 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion{% endblock %}
+
+{% block body %}
+<div class="py-5" style="min-height: calc(100vh - 120px); background: linear-gradient(135deg, rgb(255 240 229), rgba(25, 135, 84, .06))">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-5">
+
+        <div class="text-center mb-4">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+               style="width: 64px; height: 64px; background: rgba(13,110,253,.15);">
+            <span style="font-size: 28px;">🔒</span>
+          </div>
+          <h1 class="fw-bold mb-1">Connexion</h1>
+          <p class="text-muted mb-0">Accédez à votre compte Vite & Gourmand</p>
+        </div>
+
+        <div class="card border-0 shadow-sm" style="border-radius: 18px;">
+          <div class="card-body p-4 p-lg-5">
+
+            {% if error %}
+              <div class="alert alert-danger mb-4">
+                {{ error.messageKey|trans(error.messageData, 'security') }}
+              </div>
+            {% endif %}
+
+            {% if app.user %}
+              <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  Connecté en tant que <strong>{{ app.user.userIdentifier }}</strong>
+                </div>
+                <a class="btn btn-sm btn-outline-dark" href="{{ logout_path() }}">Déconnexion</a>
+              </div>
+            {% endif %}
+
+            <form method="post" novalidate>
+              <div class="mb-3">
+                <label for="inputEmail" class="form-label fw-semibold">Email</label>
+                <input
+                  type="email"
+                  value="{{ last_username }}"
+                  name="email"
+                  id="inputEmail"
+                  class="form-control form-control-lg"
+                  autocomplete="email"
+                  placeholder="ex: nom@email.com"
+                  required
+                  autofocus
+                >
+              </div>
+
+              <div class="mb-3">
+                <label for="inputPassword" class="form-label fw-semibold">Mot de passe</label>
+                <input
+                  type="password"
+                  name="password"
+                  id="inputPassword"
+                  class="form-control form-control-lg"
+                  autocomplete="current-password"
+                  placeholder="Votre mot de passe"
+                  required
+                >
+              </div>
+
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+              <button class="btn btn-primary btn-lg w-100 mt-2" type="submit">
+                Se connecter
+              </button>
+
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <a class="text-decoration-none" href="#">
+                  Mot de passe oublié ?
+                </a>
+                <a class="text-decoration-none fw-semibold" href="#">
+                  Créer un compte
+                </a>
+              </div>
+
+              <hr class="my-4">
+
+              <p class="text-muted small mb-0">
+                En vous connectant, vous acceptez nos conditions d’utilisation.
+              </p>
+            </form>
+
+          </div>
+        </div>
+
+        <div class="text-center mt-3">
+          <a class="text-muted text-decoration-none" href="#">
+            ← Retour à l’accueil
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
