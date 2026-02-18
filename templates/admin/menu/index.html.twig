@@ -1,13 +1,15 @@
 {% extends 'base.html.twig' %}
-{% block title %}Menus{% endblock %}
+{% block title %}Gestion des menus{% endblock %}
 
 {% block body %}
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="fw-bold mb-0">Menus</h1>
-    <a href="{{ path('admin_menu_new') }}" class="btn btn-primary">
-      + Nouveau menu
-    </a>
+
+    <button class="btn btn-primary" id="btnAddMenu"
+            data-url="{{ path('admin_menu_new') }}">
+      <i class="bi bi-plus-circle me-1"></i> Ajouter
+    </button>
   </div>
 
   {% for type, messages in app.flashes %}
@@ -16,51 +18,146 @@
     {% endfor %}
   {% endfor %}
 
-  <div class="card shadow-sm">
+  <div class="card shadow-sm border-0">
     <div class="table-responsive">
       <table class="table align-middle mb-0">
         <thead class="table-light">
           <tr>
             <th>Titre</th>
             <th>Thème</th>
-            <th>Min personnes</th>
-            <th>Prix min</th>
+            <th>Min</th>
+            <th>Prix</th>
             <th>Stock</th>
             <th>Statut</th>
             <th class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
-        {% for m in menus %}
-          <tr>
-            <td class="fw-semibold">{{ m.title }}</td>
-            <td>{{ m.themeLabel ?? '-' }}</td>
-            <td>{{ m.minPeople }}</td>
-            <td>{{ m.minPrice }} €</td>
-            <td>{{ m.stock ?? '-' }}</td>
-            <td>
-              {% if m.isActive %}
-                <span class="badge bg-success">Actif</span>
-              {% else %}
-                <span class="badge bg-secondary">Inactif</span>
-              {% endif %}
-            </td>
-            <td class="text-end">
-              <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_menu_edit', {id: m.id}) }}">Modifier</a>
+          {% for m in menus %}
+            <tr>
+              <td class="fw-semibold">{{ m.title }}</td>
+              <td>{{ m.themeLabel ?? '-' }}</td>
+              <td>{{ m.minPeople }}</td>
+              <td>{{ m.minPrice }} €</td>
+              <td>{{ m.stock ?? '-' }}</td>
+              <td>
+                {% if m.isActive %}
+                  <span class="badge bg-success">Actif</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inactif</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary btnEditMenu"
+                        data-url="{{ path('admin_menu_edit', {id: m.id}) }}">
+                  <i class="bi bi-pencil-square me-1"></i> Modifier
+                </button>
 
-              <form method="post" action="{{ path('admin_menu_delete', {id: m.id}) }}"
-                    class="d-inline" onsubmit="return confirm('Supprimer ce menu ?');">
-                <input type="hidden" name="_token" value="{{ csrf_token('delete_menu_' ~ m.id) }}">
-                <button class="btn btn-sm btn-outline-danger">Supprimer</button>
-              </form>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="text-center text-muted py-4">Aucun menu.</td></tr>
-        {% endfor %}
+                <form method="post"
+                      action="{{ path('admin_menu_delete', {id: m.id}) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('Supprimer ce menu ?');">
+                  <input type="hidden" name="_token" value="{{ csrf_token('delete_menu_' ~ m.id) }}">
+                  <button class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i> Supprimer
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">Aucun menu.</td>
+            </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+{# ✅ MODAL #}
+<div class="modal fade" id="menuModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="menuModalTitle">Menu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="menuModalBody">Chargement...</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import * as bootstrap from 'bootstrap';
+
+  const modalEl = document.getElementById('menuModal');
+  const modalTitle = document.getElementById('menuModalTitle');
+  const modalBody = document.getElementById('menuModalBody');
+  const modal = new bootstrap.Modal(modalEl);
+
+  function bindFormAjax() {
+    const form = modalBody.querySelector('#menuAjaxForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const res = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json',
+        },
+        body: new FormData(form)
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await res.text();
+        modalBody.innerHTML = '<div class="alert alert-danger">Erreur serveur. Regarde la console.</div>';
+        console.error('Réponse non JSON:', text);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        modal.hide();
+        location.reload();
+        return;
+      }
+
+      if (data.html) {
+        modalBody.innerHTML = data.html;
+        bindFormAjax();
+        return;
+      }
+
+      modalBody.innerHTML = '<div class="alert alert-danger">Erreur serveur.</div>';
+    });
+  }
+
+  async function openModal(url, title) {
+    modalTitle.textContent = title;
+    modalBody.innerHTML = 'Chargement...';
+    modal.show();
+
+    const res = await fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+
+    modalBody.innerHTML = await res.text();
+    bindFormAjax();
+  }
+
+  document.getElementById('btnAddMenu')?.addEventListener('click', (e) => {
+    openModal(e.currentTarget.dataset.url, 'Ajouter un menu');
+  });
+
+  document.querySelectorAll('.btnEditMenu').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn.dataset.url, 'Modifier le menu'));
+  });
+</script>
 {% endblock %}
