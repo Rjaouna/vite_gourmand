@@ -12,78 +12,129 @@ use App\Entity\OpeningHour;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
+use Faker\Factory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class AppFixtures extends Fixture
 {
     public function __construct(
-        private readonly UserPasswordHasherInterface $hasher
+        private readonly UserPasswordHasherInterface $hasher,
     ) {}
 
     private function passwordFromEmail(string $email): string
     {
-        // demandé : "début de mail + @123"
         $prefix = explode('@', $email)[0] ?: 'user';
         return $prefix . '@123';
     }
 
+    /**
+     * Crée un faux fichier image (SVG) dans /public/uploads/menus/
+     * et retourne le chemin relatif utilisable par asset().
+     */
+    private function createMenuPlaceholderImage(string $projectDir, string $fileName, string $title): string
+    {
+        $dir = $projectDir . '/public/uploads/menus';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        $path = $dir . '/' . $fileName;
+
+        // petit SVG simple (pas besoin de lib)
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES);
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#f8f9fa"/>
+      <stop offset="1" stop-color="#e9ecef"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)"/>
+  <rect x="60" y="60" width="1080" height="680" rx="28" fill="#ffffff" stroke="#dee2e6" stroke-width="6"/>
+  <text x="600" y="380" font-family="Arial, sans-serif" font-size="56" text-anchor="middle" fill="#212529">Vite &amp; Gourmand</text>
+  <text x="600" y="470" font-family="Arial, sans-serif" font-size="40" text-anchor="middle" fill="#495057">{$safeTitle}</text>
+</svg>
+SVG;
+
+        file_put_contents($path, $svg);
+
+        // chemin relatif (public/..)
+        return 'uploads/menus/' . $fileName;
+    }
+
     public function load(ObjectManager $manager): void
     {
-        $now = new \DateTimeImmutable();
+        $faker = Factory::create('fr_FR');
+        $now   = new \DateTimeImmutable();
+        $projectDir = dirname(__DIR__, 2);
 
         // =========================
-        // USERS (admin / employé / client)
+        // USERS (admin / employé / clients)
         // =========================
-        $usersData = [
-            [
-                'email' => 'admin@vitegourmand.fr',
-                'roles' => ['ROLE_ADMIN'],
-                'firstName' => 'José',
-                'lastName' => 'Admin',
-            ],
-            [
-                'email' => 'employe@vitegourmand.fr',
-                'roles' => ['ROLE_EMPLOYEE'],
-                'firstName' => 'Julie',
-                'lastName' => 'Employée',
-            ],
-            [
-                'email' => 'client@vitegourmand.fr',
-                'roles' => [], // ROLE_USER est ajouté automatiquement dans getRoles()
-                'firstName' => 'Client',
-                'lastName' => 'Test',
-            ],
-        ];
+        $admin = (new User())
+            ->setEmail('admin@vitegourmand.fr')
+            ->setRoles(['ROLE_ADMIN'])
+            ->setFirstName('José')
+            ->setLastName('Admin')
+            ->setPhone('0600000000')
+            ->setAddressLine1('10 Rue du Test')
+            ->setCity('Bordeaux')
+            ->setPostalCode(33000)
+            ->setCountry('France')
+            ->setIsActive(true)
+            ->setIsVerified(true)
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now);
 
-        $users = [];
+        $admin->setPassword($this->hasher->hashPassword($admin, $this->passwordFromEmail($admin->getEmail())));
+        $manager->persist($admin);
 
-        foreach ($usersData as $u) {
-            $user = new User();
-            $user->setEmail($u['email']);
-            $user->setRoles($u['roles']);
-            $user->setFirstName($u['firstName']);
-            $user->setLastName($u['lastName']);
-            $user->setPhone('0600000000');
-            $user->setAddressLine1('10 Rue du Test');
-            $user->setCity('Bordeaux');
-            $user->setPostalCode(33000);
-            $user->setCountry('France');
-            $user->setIsActive(true);
-            $user->setCreatedAt($now);
-            $user->setUpdatedAt($now);
-            $user->setIsVerified(true);
+        $employee = (new User())
+            ->setEmail('employe@vitegourmand.fr')
+            ->setRoles(['ROLE_EMPLOYEE'])
+            ->setFirstName('Julie')
+            ->setLastName('Employée')
+            ->setPhone('0600000001')
+            ->setAddressLine1('12 Rue du Test')
+            ->setCity('Bordeaux')
+            ->setPostalCode(33000)
+            ->setCountry('France')
+            ->setIsActive(true)
+            ->setIsVerified(true)
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now);
 
-            $plainPassword = $this->passwordFromEmail($u['email']); // ex: admin@123
-            $user->setPassword($this->hasher->hashPassword($user, $plainPassword));
+        $employee->setPassword($this->hasher->hashPassword($employee, $this->passwordFromEmail($employee->getEmail())));
+        $manager->persist($employee);
 
-            $manager->persist($user);
-            $users[] = $user;
+        $clients = [];
+        for ($i = 0; $i < 20; $i++) {
+            $email = $faker->unique()->safeEmail();
+
+            $u = (new User())
+                ->setEmail($email)
+                ->setRoles([]) // ROLE_USER auto dans getRoles()
+                ->setFirstName($faker->firstName())
+                ->setLastName($faker->lastName())
+                ->setPhone('06' . $faker->numerify('########'))
+                ->setAddressLine1($faker->streetAddress())
+                ->setCity($faker->city())
+                ->setPostalCode((int) $faker->postcode())
+                ->setCountry('France')
+                ->setIsActive(true)
+                ->setIsVerified(true)
+                ->setCreatedAt($now)
+                ->setUpdatedAt($now);
+
+            $u->setPassword($this->hasher->hashPassword($u, $this->passwordFromEmail($email)));
+            $manager->persist($u);
+            $clients[] = $u;
         }
 
         // =========================
         // OPENING HOURS (7 jours)
         // =========================
-        // 1=lundi ... 7=dimanche
         $hours = [
             1 => ['closed' => false, 'open' => '09:00', 'close' => '18:00'],
             2 => ['closed' => false, 'open' => '09:00', 'close' => '18:00'],
@@ -95,171 +146,119 @@ class AppFixtures extends Fixture
         ];
 
         foreach ($hours as $day => $h) {
-            $oh = new OpeningHour();
-            $oh->setDayOfWeek($day);
-            $oh->setIsClosed($h['closed']);
-            $oh->setCreatedAt($now);
+            $oh = (new OpeningHour())
+                ->setDayOfWeek($day)
+                ->setIsClosed($h['closed'])
+                ->setCreatedAt($now);
 
             if (!$h['closed']) {
                 $oh->setOpenTime(new \DateTimeImmutable($h['open']));
                 $oh->setCloseTime(new \DateTimeImmutable($h['close']));
             }
-
             $manager->persist($oh);
         }
 
         // =========================
         // ALLERGENS
         // =========================
-        $allergenNames = ['Gluten', 'Lactose', 'Arachides', 'Fruits à coque', 'Oeufs', 'Poisson', 'Soja'];
+        $allergenNames = ['Gluten', 'Lactose', 'Arachides', 'Fruits à coque', 'Oeufs', 'Poisson', 'Soja', 'Sésame', 'Moutarde'];
+        $allergens = [];
         foreach ($allergenNames as $name) {
-            $a = new Allergen();
-            $a->setName($name);
-            $a->setCreatedAt($now);
+            $a = (new Allergen())
+                ->setName($name)
+                ->setCreatedAt($now);
             $manager->persist($a);
+            $allergens[] = $a;
         }
 
         // =========================
         // DIETS
         // =========================
-        $diets = [
-            ['Végétarien', true],
-            ['Vegan', true],
-            ['Classique', true],
-            ['Sans gluten', true],
-        ];
-
-        foreach ($diets as [$name, $active]) {
-            $d = new Diet();
-            $d->setName($name);
-            $d->setIsActive($active);
-            $d->setCreatedAt($now);
+        $dietNames = ['Végétarien', 'Vegan', 'Classique', 'Sans gluten', 'Halal'];
+        $diets = [];
+        foreach ($dietNames as $name) {
+            $d = (new Diet())
+                ->setName($name)
+                ->setIsActive(true)
+                ->setCreatedAt($now);
             $manager->persist($d);
+            $diets[] = $d;
         }
 
         // =========================
-        // DISHES (entrée / plat / dessert)
+        // DISHES (beaucoup)
         // =========================
-        $dishesData = [
-            ['Salade gourmande', 'entree', 'Salade fraîche avec toppings maison.'],
-            ['Velouté de saison', 'entree', 'Velouté selon les légumes du moment.'],
-            ['Poulet basquaise', 'plat', 'Poulet mijoté, sauce maison.'],
-            ['Lasagnes végétariennes', 'plat', 'Lasagnes aux légumes et sauce tomate.'],
-            ['Tarte aux pommes', 'dessert', 'Tarte croustillante, pommes caramélisées.'],
-            ['Mousse au chocolat', 'dessert', 'Mousse légère, chocolat noir.'],
-        ];
+        $dishTypes = ['entree', 'plat', 'dessert'];
+        $dishes = [];
+        for ($i = 0; $i < 40; $i++) {
+            $type = $faker->randomElement($dishTypes);
 
-        foreach ($dishesData as [$name, $type, $desc]) {
-            $dish = new Dish();
-            $dish->setName($name);
-            $dish->setType($type);
-            $dish->setDescription($desc);
-            $dish->setIsActive(true);
-            $dish->setCreatedAt($now);
+            $dish = (new Dish())
+                ->setName(ucfirst($faker->words(3, true)))
+                ->setType($type)
+                ->setDescription($faker->sentence(12))
+                ->setIsActive(true)
+                ->setCreatedAt($now);
+
             $manager->persist($dish);
+            $dishes[] = $dish;
         }
 
         // =========================
-        // MENUS + IMAGES (MenuImage lié à Menu)
+        // MENUS + IMAGES
         // =========================
-        $menusData = [
-            [
-                'title' => 'Menu Classique',
-                'theme' => 'Classique',
-                'desc'  => 'Un menu simple et efficace, parfait pour tous les jours.',
-                'conditions' => 'Commande minimum 48h à l’avance.',
-                'minPeople' => 4,
-                'minPrice'  => '45',
-                'stock' => 10,
-                'images' => [
-                    ['assets/img/menus/classique_1.jpg', 'Menu classique', 1, true],
-                    ['assets/img/menus/classique_2.jpg', 'Plat classique', 2, false],
-                ],
-            ],
-            [
-                'title' => 'Menu Noël',
-                'theme' => 'Noël',
-                'desc'  => 'Menu festif avec des saveurs de fin d’année.',
-                'conditions' => 'Commande minimum 7 jours à l’avance.',
-                'minPeople' => 6,
-                'minPrice'  => '79',
-                'stock' => 5,
-                'images' => [
-                    ['assets/img/menus/noel_1.jpg', 'Menu Noël', 1, true],
-                ],
-            ],
-            [
-                'title' => 'Menu Pâques',
-                'theme' => 'Pâques',
-                'desc'  => 'Menu spécial Pâques, gourmand et généreux.',
-                'conditions' => 'Commande minimum 5 jours à l’avance.',
-                'minPeople' => 6,
-                'minPrice'  => '69',
-                'stock' => 6,
-                'images' => [
-                    ['assets/img/menus/paques_1.jpg', 'Menu Pâques', 1, true],
-                ],
-            ],
-            [
-                'title' => 'Menu Évènement',
-                'theme' => 'Évènement',
-                'desc'  => 'Idéal pour anniversaires, réunions, petits évènements.',
-                'conditions' => 'Commande minimum 72h à l’avance.',
-                'minPeople' => 8,
-                'minPrice'  => '120',
-                'stock' => 3,
-                'images' => [
-                    ['assets/img/menus/event_1.jpg', 'Menu évènement', 1, true],
-                ],
-            ],
-        ];
+        $themes = ['Classique', 'Noël', 'Pâques', 'Évènement', 'Anniversaire', 'Buffet', 'Cocktail'];
+        $menuCount = 18;
 
-        foreach ($menusData as $m) {
-            $menu = new Menu();
-            $menu->setTitle($m['title']);
-            $menu->setThemeLabel($m['theme']);
-            $menu->setDescription($m['desc']);
-            $menu->setConditions($m['conditions']);
-            $menu->setMinPeople($m['minPeople']);
-            $menu->setMinPrice($m['minPrice']); // DECIMAL stocké en string
-            $menu->setStock($m['stock']);
-            $menu->setIsActive(true);
-            $menu->setCreatedAt($now);
-            $menu->setUpdatedAt($now);
+        for ($i = 1; $i <= $menuCount; $i++) {
+            $theme = $faker->randomElement($themes);
+            $minPeople = $faker->numberBetween(2, 12);
+            $minPrice = $faker->numberBetween(35, 160); // on stocke en string
 
-            // images liées
-            foreach ($m['images'] as [$path, $alt, $pos, $cover]) {
-                $img = new MenuImage();
-                $img->setMenu($menu);
-                $img->setImagePath($path);
-                $img->setAltText($alt);
-                $img->setPosition($pos);
-                $img->setIsCover($cover);
-                $img->setCreatedAt($now);
+            $menu = (new Menu())
+                ->setTitle('Menu ' . ucfirst($faker->words(2, true)))
+                ->setThemeLabel($theme)
+                ->setDescription($faker->sentence(18))
+                ->setConditions('Commande minimum ' . $faker->numberBetween(24, 168) . 'h à l’avance.')
+                ->setMinPeople($minPeople)
+                ->setMinPrice((string)$minPrice)
+                ->setStock($faker->numberBetween(0, 15))
+                ->setIsActive(true)
+                ->setCreatedAt($now)
+                ->setUpdatedAt($now);
 
-                // optionnel : grâce à cascade persist, persist menu suffit,
-                // mais on peut persist image aussi sans souci
-                $manager->persist($img);
+            // 1 à 4 images par menu
+            $imgCount = $faker->numberBetween(1, 4);
+            for ($j = 1; $j <= $imgCount; $j++) {
+                $isCover = ($j === 1); // la première cover
+                $fileName = 'menu_' . $i . '_' . $j . '.svg';
+                $imgPath = $this->createMenuPlaceholderImage($projectDir, $fileName, $menu->getTitle());
+
+                $img = (new MenuImage())
+                    ->setMenu($menu)
+                    ->setImagePath($imgPath)
+                    ->setAltText($menu->getTitle() . ' - image ' . $j)
+                    ->setPosition($j)
+                    ->setIsCover($isCover)
+                    ->setCreatedAt($now);
+
                 $menu->addImage($img);
+                $manager->persist($img);
             }
 
             $manager->persist($menu);
         }
 
         // =========================
-        // CONTACT MESSAGES
+        // CONTACT MESSAGES (beaucoup)
         // =========================
-        $contactSamples = [
-            ['Demande devis', 'Bonjour, je souhaite un devis pour 12 personnes.', 'client@vitegourmand.fr'],
-            ['Question menu', 'Pouvez-vous proposer une option végétarienne ?', 'test@mail.fr'],
-        ];
+        for ($i = 0; $i < 30; $i++) {
+            $cm = (new ContactMessage())
+                ->setTitle(ucfirst($faker->words(4, true)))
+                ->setMessage($faker->paragraphs(2, true))
+                ->setEmail($faker->safeEmail())
+                ->setCreatedAt($now);
 
-        foreach ($contactSamples as [$title, $msg, $email]) {
-            $cm = new ContactMessage();
-            $cm->setTitle($title);
-            $cm->setMessage($msg);
-            $cm->setEmail($email);
-            $cm->setCreatedAt($now);
             $manager->persist($cm);
         }
 
