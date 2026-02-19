@@ -8,6 +8,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Dish;
+use App\Entity\Menu;
+
 
 class MenuPublicController extends AbstractController
 {
@@ -89,51 +92,57 @@ class MenuPublicController extends AbstractController
         ]);
     }
 
-    #[Route('/menu/{id}', name: 'menu_show', requirements: ['id' => '\d+'])]
+    #[Route('/menus/{id}', name: 'menu_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Menu $menu): Response
     {
-        // ✅ Image cover par défaut
+        // Images (cover + side)
         $defaultCover = 'uploads/menus/menu.png';
 
         $coverPath = $defaultCover;
-        $sideImagePath = $defaultCover;
+        $sidePath  = $defaultCover;
 
-        // Cover = image marquée isCover
-        foreach ($menu->getImages() as $img) {
-            if (method_exists($img, 'isCover') && $img->isCover()) {
-                $coverPath = $img->getImagePath() ?: $defaultCover;
-                break;
+        if (method_exists($menu, 'getImages')) {
+            // cover = isCover true sinon fallback
+            foreach ($menu->getImages() as $img) {
+                if (method_exists($img, 'isCover') && $img->isCover()) {
+                    $coverPath = $img->getImagePath() ?: $defaultCover;
+                    break;
+                }
+            }
+            // side = première image non-cover sinon cover
+            foreach ($menu->getImages() as $img) {
+                if (method_exists($img, 'isCover') && !$img->isCover()) {
+                    $sidePath = $img->getImagePath() ?: $coverPath;
+                    break;
+                }
+            }
+            if (!$sidePath) {
+                $sidePath = $coverPath;
             }
         }
 
-        // Petite image à droite = première image non cover (sinon cover)
-        foreach ($menu->getImages() as $img) {
-            if (method_exists($img, 'isCover') && !$img->isCover()) {
-                $sideImagePath = $img->getImagePath() ?: $coverPath;
-                break;
+        // Dishes (entrée/plat/dessert) via ManyToMany Menu->getDishes()
+        $entree = null;
+        $plat = null;
+        $dessert = null;
+
+        if (method_exists($menu, 'getDishes')) {
+            foreach ($menu->getDishes() as $d) {
+                if (!$d instanceof Dish) continue;
+
+                if ($d->getType() === Dish::TYPE_ENTREE && !$entree) $entree = $d;
+                if ($d->getType() === Dish::TYPE_PLAT && !$plat) $plat = $d;
+                if ($d->getType() === Dish::TYPE_DESSERT && !$dessert) $dessert = $d;
             }
         }
-        if (!$sideImagePath) {
-            $sideImagePath = $coverPath;
-        }
 
-        /**
-         * ⚠️ Entrée/Plat/Dessert :
-         * Ton entity Menu ne montre pas de relation vers des plats.
-         * Donc je mets une structure "courses" prête à brancher plus tard.
-         * Pour l’instant : vide => le template affiche un contenu fallback.
-         */
-        $courses = [
-            'entree' => [],
-            'plat' => [],
-            'dessert' => [],
-        ];
-
-        return $this->render('menu/show.html.twig', [
+        return $this->render('menu_public/show.html.twig', [
             'menu' => $menu,
             'coverPath' => $coverPath,
-            'sideImagePath' => $sideImagePath,
-            'courses' => $courses,
+            'sidePath' => $sidePath,
+            'entree' => $entree,
+            'plat' => $plat,
+            'dessert' => $dessert,
         ]);
     }
 }
